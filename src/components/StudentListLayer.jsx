@@ -86,28 +86,63 @@ const StudentListLayer = () => {
   };
 
   const handleDelete = async (id) => {
-    const result = await Swal.fire({
-      title: 'Apakah Anda yakin?',
-      text: 'Data siswa yang dihapus tidak bisa dikembalikan.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Ya, hapus!',
-      cancelButtonText: 'Batal'
-    });
+      const result = await Swal.fire({
+        title: 'Apakah Anda yakin?',
+        text: 'Data siswa yang dihapus tidak bisa dikembalikan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, hapus!',
+        cancelButtonText: 'Batal'
+      });
 
-    if (result.isConfirmed) {
-      try {
-        await axios.delete(`${BASE_URL}/students/${id}`);
-        toast.success("Siswa berhasil dihapus");
-        fetchStudents(currentPage);
-        setPage(currentPage);
-      } catch (error) {
-        toast.error("Gagal menghapus siswa");
-        if (error.response?.status === 403 || error.response?.status === 401) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("isLoggedIn");
-          navigate("/sign-in");
+      if (result.isConfirmed) {
+        try {
+          const token = localStorage.getItem("token");
+          await axios.delete(`${BASE_URL}/students/${id}`,
+            {
+              headers: {
+                Authorization: `${token}`,
+              },
+            }
+          );
+          toast.success("Siswa berhasil dihapus");
+          fetchStudents(currentPage);
+          setPage(currentPage);
+        } catch (error) {
+          toast.error("Gagal menghapus siswa");
+          if (error.response?.status === 403 || error.response?.status === 401) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("isLoggedIn");
+            navigate("/sign-in");
+          }
         }
+      }
+    };
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${BASE_URL}/students/import`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `${token}`,
+        },
+      });
+      toast.success("Import siswa berhasil");
+      fetchStudents(currentPage); // refresh list
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error("Gagal import siswa");
+      if (error.response?.status === 403 || error.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("isLoggedIn");
+        navigate("/sign-in");
       }
     }
   };
@@ -153,6 +188,17 @@ const StudentListLayer = () => {
         </form>
         </div>
         <div className='d-flex flex-wrap align-items-center gap-3'>
+          <input
+            type='file'
+            accept='.xlsx, .xls'
+            onChange={handleImport}
+            id='importFile'
+            style={{ display: 'none' }}
+          />
+          <label htmlFor='importFile' className='btn btn-sm btn-secondary'>
+            <i className='ri-upload-2-line' /> Import Excel
+          </label>
+
           <Link to='/student-add' className='btn btn-sm btn-primary-600'>
             <i className='ri-add-line' /> Tambah Siswa
           </Link>
