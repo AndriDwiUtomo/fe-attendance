@@ -95,6 +95,37 @@ const AttendanceLayer = () => {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const formattedDate = selectedDate.toISOString().split("T")[0];
+
+      const response = await axios.get(`${BASE_URL}/attendances/export`, {
+        params: {
+          date: formattedDate,
+          prayerName: shalat,
+          classId: kelasId
+        },
+        headers: {
+          Authorization: `${token}`,
+        },
+        responseType: "blob", // penting agar file bisa diunduh
+      });
+
+      // Buat link unduhan
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `attendance-${shalat}-${formattedDate}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Gagal mengekspor data:", error);
+      alert("Gagal mengekspor data.");
+    }
+  };
+
   return (
     <div className='row gy-4'>
       <div className='col-xxl-3 col-lg-4'>
@@ -181,7 +212,8 @@ const AttendanceLayer = () => {
       </div>
       <div className='col-xxl-9 col-lg-8'>
         <div className='chat-main card overflow-hidden'>
-          <div className='chat-sidebar-single gap-8 justify-content-between cursor-default flex-nowrap'>
+          <div className='d-flex align-items-center justify-content-between px-24 pt-24'>
+            {/* Kiri: Back dan Title */}
             <div className='d-flex align-items-center gap-16'>
               <Link
                 to='#'
@@ -193,6 +225,17 @@ const AttendanceLayer = () => {
                 Daftar Siswa
               </h6>
             </div>
+
+            {/* Kanan: Tombol Export */}
+            <button
+              onClick={handleExport}
+              disabled={students.length === 0}
+              className={`btn btn-sm fw-semibold radius-8 d-flex align-items-center gap-8 px-16 py-8 
+                ${students.length === 0 ? "bg-light text-primary opacity-50 cursor-not-allowed" : "bg-primary-600 text-white"}`}
+            >
+              <Icon icon="ic:baseline-download" className="text-lg" />
+              Export Excel
+            </button>
           </div>
           {/* chat-sidebar-single end */}
           <div className='chat-message-list max-h-612-px min-h-612-px'>
